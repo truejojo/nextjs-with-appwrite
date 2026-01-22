@@ -2,6 +2,7 @@ import { connect } from '@/dbConfig/dbConfig';
 import User from '@/models/userModel';
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import { sendEmail } from '@/helpers/mailer';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,9 +26,18 @@ export async function POST(request: NextRequest) {
       email,
       password: hashedPassword,
     });
-    await newUser.save();
+    const savedUser = await newUser.save();
 
-    return NextResponse.json({ message: 'User registered successfully' }, { status: 201 });
+    await sendEmail({ email: savedUser.email, emailType: 'VERIFY', userId: savedUser._id.toString() });
+
+    return NextResponse.json({ 
+      message: 'User registered successfully',
+      success:true,
+      username: savedUser.username,
+      email: savedUser.email
+     }, 
+     { status: 201 }
+    );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ message: 'Internal Server Error: ' + message }, { status: 500 });
